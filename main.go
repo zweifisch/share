@@ -3,50 +3,56 @@ package main
 import (
 	"fmt"
 	"html"
+	"io"
 	"io/ioutil"
 	"net/http"
 
-	"github.com/go-martini/martini"
+	"github.com/elazarl/go-bindata-assetfs"
+	"github.com/gorilla/mux"
 )
 
-func index() string {
+func index(w http.ResponseWriter, r *http.Request) {
 	files, _ := ioutil.ReadDir("./")
 	ret := ""
 	for _, f := range files {
 		ret += fmt.Sprintf("<li><a href=\"/%s\">%s</a></li>", f.Name(), f.Name())
 	}
 	tmpl := `<html>
-	<link rel="stylesheet" href="/style.css">
+	<link rel="stylesheet" href="/public/style.css">
 	<body>
 	%s
 	</body>
 	</html>
 	`
-	return fmt.Sprintf(tmpl, ret)
+	w.Header().Set("Content-Type", "text/html")
+	io.WriteString(w, fmt.Sprintf(tmpl, ret))
 }
 
-func entry(params martini.Params) (int, string) {
+func entry(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
 	content, err := ioutil.ReadFile(params["entry"])
 	if err != nil {
-		return 404, "not found"
+		http.Error(w, "Not Found", 404)
+		return
 	}
 
 	tmpl := `<html>
-	<link rel="stylesheet" href="/styles/tomorrow.css">
+	<link rel="stylesheet" href="/public/styles/tomorrow.css">
 	<pre><code>%s</code></pre>
-	<script src="/highlight.pack.js"></script>
+	<script src="/public/highlight.pack.js"></script>
 	<script>hljs.initHighlightingOnLoad();</script>
 	</html>
 	`
-	return 200, fmt.Sprintf(tmpl, html.EscapeString(string(content)))
+	w.Header().Set("Content-Type", "text/html")
+	io.WriteString(w, fmt.Sprintf(tmpl, html.EscapeString(string(content))))
 }
 
 func main() {
-	m := martini.Classic()
-	m.Use(func(res http.ResponseWriter, req *http.Request) {
-		res.Header().Set("Content-Type", "text/html")
-	})
-	m.Get("/", index)
-	m.Get("/:entry", entry)
-	m.Run()
+	r := mux.NewRouter()
+	r.HandleFunc("/", index)
+	r.HandleFunc("/{entry}", entry)
+	http.Handle("/", r)
+	http.Handle("/public/", http.FileServer(
+		&assetfs.AssetFS{Asset: Asset, AssetDir: AssetDir, Prefix: ""}))
+	http.ListenAndServe(":5000", nil)
 }

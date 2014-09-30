@@ -1,58 +1,59 @@
 package main
 
 import (
+	"flag"
 	"fmt"
-	"html"
-	"io"
 	"io/ioutil"
 	"net/http"
-
-	"github.com/elazarl/go-bindata-assetfs"
-	"github.com/gorilla/mux"
+	"net/url"
+	"os"
 )
 
-func index(w http.ResponseWriter, r *http.Request) {
-	files, _ := ioutil.ReadDir("./")
-	ret := ""
-	for _, f := range files {
-		ret += fmt.Sprintf("<li><a href=\"/%s\">%s</a></li>", f.Name(), f.Name())
+func hasPipe() bool {
+	fi, err := os.Stdin.Stat()
+	if err != nil {
+		panic(err)
 	}
-	tmpl := `<html>
-	<link rel="stylesheet" href="/public/style.css">
-	<body>
-	%s
-	</body>
-	</html>
-	`
-	w.Header().Set("Content-Type", "text/html")
-	io.WriteString(w, fmt.Sprintf(tmpl, ret))
+	return fi.Mode()&os.ModeNamedPipe != 0
 }
 
-func entry(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	content, err := ioutil.ReadFile(params["entry"])
-	if err != nil {
-		http.Error(w, "Not Found", 404)
-		return
-	}
+func fromStdin() string {
+	content, _ := ioutil.ReadAll(os.Stdin)
+	return string(content)
+}
 
-	tmpl := `<html>
-	<link rel="stylesheet" href="/public/styles/tomorrow.css">
-	<pre><code>%s</code></pre>
-	<script src="/public/highlight.pack.js"></script>
-	<script>hljs.initHighlightingOnLoad();</script>
-	</html>
-	`
-	w.Header().Set("Content-Type", "text/html")
-	io.WriteString(w, fmt.Sprintf(tmpl, html.EscapeString(string(content))))
+type Client struct {
+	url string
+}
+
+func (c Client) post(content string, name string) {
+	resp, err := http.PostForm(c.url+"/"+name, url.Values{"content": {content}})
+	if err != nil {
+		panic(err)
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	fmt.Println(string(body))
 }
 
 func main() {
-	r := mux.NewRouter()
-	r.HandleFunc("/", index)
-	r.HandleFunc("/{entry}", entry)
-	http.Handle("/", r)
-	http.Handle("/public/", http.FileServer(
-		&assetfs.AssetFS{Asset: Asset, AssetDir: AssetDir, Prefix: ""}))
-	http.ListenAndServe(":5000", nil)
+	var startServer = flag.Bool("server", false, "run server")
+	flag.BoolVar(startServer, "s", false, "ailas for server")
+
+	wd, _ := os.Getwd()
+	var root = flag.String("root", wd, "root directory")
+
+	var name = flag.String("as", "entry", "name")
+
+	flag.Parse()
+
+	if *startServer {
+		server := Server{*root}
+		server.serve(8909)
+	} else {
+		client := Client{"http://localhost:8909"}
+		if hasPipe() {
+			client.post(fromStdin(), *name)
+		}
+	}
 }

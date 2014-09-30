@@ -1,6 +1,6 @@
 # shared
 
-share code snips, logs and files with teammate
+share urls, code snips with teammate
 
 ## install
 
@@ -13,7 +13,8 @@ go get github.com/zweifisch/shared
 start server
 
 ```sh
-shared --port 8888
+$ share --server
+listen on 8909
 ```
 
 client usage
@@ -22,27 +23,27 @@ from stdin
 
 ```sh
 $ grep error /var/log/app.log | share --as error
-http://localhost:8888/error
+http://localhost:8909/error
 ```
 
 from clipboard
 
 ```sh
 $ share --as password
-http://localhost:8888/password
+http://localhost:8909/password
 ```
 
 file
 
 ```sh
 $ share assets.tgz
-http://localhost:8888/assets.tgz
+http://localhost:8909/assets.tgz
 ```
 
 connect to a remote server
 
 ```sh
-$ cat source.py | share --server http://192.168.11.16:8888
+$ cat source.py | share --server http://192.168.11.16:8909
 ```
 
 ## config
@@ -63,3 +64,8 @@ $ share --config disable put  # only client from localhost can publish content
 
 TBD
 
+## development
+
+```sh
+go-bindata public/...
+```

@@ -9,47 +9,59 @@ import (
 	"net/http"
 	"os"
 	"path"
-	"strings"
-	"time"
+	"strconv"
 
 	"github.com/elazarl/go-bindata-assetfs"
-	"github.com/gorilla/mux"
 )
 
 type Server struct {
-	root string
+	root    string
+	next    int
+	entries []string
+}
+
+func (s *Server) scan() {
+	files, _ := ioutil.ReadDir(s.root)
+	for _, f := range files {
+		name := f.Name()
+		if _, err := strconv.Atoi(name); err == nil {
+			s.register(name)
+		}
+	}
+}
+
+func (s *Server) register(entry string) int {
+	s.entries = append(s.entries, entry)
+	num, _ := strconv.Atoi(entry)
+	if num >= s.next {
+		s.next = num + 1
+	}
+	return num
+}
+
+func (s *Server) incr() int {
+	return s.register(strconv.Itoa(s.next))
 }
 
 func (s Server) index(w http.ResponseWriter, r *http.Request) {
-	files, _ := ioutil.ReadDir(s.root)
-	ret := ""
-	for _, f := range files {
-		name := f.Name()
-		if !strings.HasPrefix(name, ".") {
-			ret += fmt.Sprintf("<li><a href=\"/%s\">%s</a></li>", name, name)
-		}
+	entries := ""
+	for _, entry := range s.entries {
+		entries += fmt.Sprintf("<li><a href=\"/entry/%s\">%s</a></li>", entry, entry)
 	}
 	tmpl := `<html>
 	<link rel="stylesheet" href="/public/style.css">
-	<ol>
-	%s
-	</ol>
-	</html>
-	`
+	<ol>%s</ol>
+	</html>`
 	w.Header().Set("Content-Type", "text/html")
-	io.WriteString(w, fmt.Sprintf(tmpl, ret))
+	io.WriteString(w, fmt.Sprintf(tmpl, entries))
 }
 
-func (s Server) createEntry(w http.ResponseWriter, r *http.Request) {
+func (s *Server) createEntry(w http.ResponseWriter, r *http.Request) {
 	log.Println(r.RemoteAddr, r.Method, r.RequestURI)
-	params := mux.Vars(r)
-	entry := params["entry"]
+	entry := strconv.Itoa(s.incr())
 	realpath := path.Join(s.root, entry)
 	content := r.PostFormValue("content")
 	if _, err := os.Stat(realpath); err == nil {
-		now := time.Now()
-		entry = fmt.Sprintf("%s-%02d%02d%02d", entry, now.Hour(), now.Minute(), now.Second())
-		realpath = fmt.Sprintf("%s-%02d%02d%02d", realpath, now.Hour(), now.Minute(), now.Second())
 		if _, err := os.Stat(realpath); err == nil {
 			http.Error(w, "file exists", 409)
 			return
@@ -61,8 +73,8 @@ func (s Server) createEntry(w http.ResponseWriter, r *http.Request) {
 
 func (s Server) getEntry(w http.ResponseWriter, r *http.Request) {
 	log.Println(r.RemoteAddr, r.Method, r.RequestURI)
-	params := mux.Vars(r)
-	realpath := path.Join(s.root, params["entry"])
+	entry := r.URL.Path[7:]
+	realpath := path.Join(s.root, entry)
 	content, err := ioutil.ReadFile(realpath)
 	if err != nil {
 		http.Error(w, "Not Found", 404)
@@ -81,11 +93,11 @@ func (s Server) getEntry(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s Server) serve(port int) {
-	router := mux.NewRouter()
-	router.HandleFunc("/", s.index)
-	router.HandleFunc("/{entry}", s.getEntry).Methods("GET")
-	router.HandleFunc("/{entry}", s.createEntry).Methods("POST")
-	http.Handle("/", router)
+	s.scan()
+	fmt.Println(s)
+	http.HandleFunc("/", s.index)
+	http.HandleFunc("/entry", s.createEntry)
+	http.HandleFunc("/entry/", s.getEntry)
 	http.Handle("/public/", http.FileServer(
 		&assetfs.AssetFS{Asset: Asset, AssetDir: AssetDir, Prefix: ""}))
 	http.ListenAndServe(fmt.Sprintf(":%d", port), nil)

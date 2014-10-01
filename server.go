@@ -50,6 +50,10 @@ func (s Server) createEntry(w http.ResponseWriter, r *http.Request) {
 		now := time.Now()
 		entry = fmt.Sprintf("%s-%02d%02d%02d", entry, now.Hour(), now.Minute(), now.Second())
 		realpath = fmt.Sprintf("%s-%02d%02d%02d", realpath, now.Hour(), now.Minute(), now.Second())
+		if _, err := os.Stat(realpath); err == nil {
+			http.Error(w, "file exists", 409)
+			return
+		}
 	}
 	ioutil.WriteFile(realpath, []byte(content), 0644)
 	io.WriteString(w, "http://"+r.Host+"/"+entry)

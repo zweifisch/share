@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+
+	"github.com/atotto/clipboard"
 )
 
 func hasPipe() bool {
@@ -15,6 +17,11 @@ func hasPipe() bool {
 		panic(err)
 	}
 	return fi.Mode()&os.ModeNamedPipe != 0
+}
+
+func fromClipBoard() string {
+	content, _ := clipboard.ReadAll()
+	return content
 }
 
 func fromStdin() string {
@@ -29,10 +36,14 @@ type Client struct {
 func (c Client) post(content string, name string) {
 	resp, err := http.PostForm(c.url+"/"+name, url.Values{"content": {content}})
 	if err != nil {
-		panic(err)
+		fmt.Print(err)
+		return
 	}
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Print(err)
+	}
 	fmt.Println(string(body))
 }
 
@@ -54,6 +65,10 @@ func main() {
 		client := Client{"http://localhost:8909"}
 		if hasPipe() {
 			client.post(fromStdin(), *name)
+		} else if content := fromClipBoard(); len(content) > 0 {
+			client.post(content, *name)
+		} else {
+			fmt.Println("nothing in clipboard")
 		}
 	}
 }

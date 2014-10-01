@@ -3,66 +3,51 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io/ioutil"
-	"net/http"
-	"net/url"
-	"os"
+	"path"
 
-	"github.com/atotto/clipboard"
+	"github.com/BurntSushi/toml"
+
+	"os"
+	"os/user"
 )
 
-func hasPipe() bool {
-	fi, err := os.Stdin.Stat()
-	if err != nil {
-		panic(err)
-	}
-	return fi.Mode()&os.ModeNamedPipe != 0
+type CfgServer struct {
+	Port  int    `toml:"port"`
+	Root  string `toml:"root"`
+	Write bool   `toml:"write"`
 }
 
-func fromClipBoard() string {
-	content, _ := clipboard.ReadAll()
-	return content
+type CfgClient struct {
+	Remote string `toml:"server"`
 }
 
-func fromStdin() string {
-	content, _ := ioutil.ReadAll(os.Stdin)
-	return string(content)
-}
-
-type Client struct {
-	url string
-}
-
-func (c Client) post(content string, name string) {
-	resp, err := http.PostForm(c.url+"/"+name, url.Values{"content": {content}})
-	if err != nil {
-		fmt.Print(err)
-		return
-	}
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Print(err)
-	}
-	fmt.Println(string(body))
+type Config struct {
+	Server CfgServer `toml:"server"`
+	Client CfgClient `toml:"client"`
 }
 
 func main() {
+	cwd, _ := os.Getwd()
+	conf := Config{CfgServer{8909, cwd, true},
+		CfgClient{"http://localhost:8909"}}
+
+	usr, _ := user.Current()
+	configPath := path.Join(usr.HomeDir, ".share.toml")
+	toml.DecodeFile(configPath, &conf)
+
 	var startServer = flag.Bool("server", false, "run server")
 	flag.BoolVar(startServer, "s", false, "ailas for server")
-
-	wd, _ := os.Getwd()
-	var root = flag.String("root", wd, "root directory")
-
+	var root = flag.String("root", conf.Server.Root, "root directory")
 	var name = flag.String("as", "entry", "name")
-
+	var port = flag.Int("port", conf.Server.Port, "server port")
+	var remote = flag.String("remote", conf.Client.Remote, "remote server")
 	flag.Parse()
 
 	if *startServer {
 		server := Server{*root}
-		server.serve(8909)
+		server.serve(*port)
 	} else {
-		client := Client{"http://localhost:8909"}
+		client := Client{*remote}
 		if hasPipe() {
 			client.post(fromStdin(), *name)
 		} else if content := fromClipBoard(); len(content) > 0 {

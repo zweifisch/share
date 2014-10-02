@@ -1,11 +1,11 @@
-# shared
+# share
 
-share urls, code snips with teammate
+share code snips with teammate
 
 ## install
 
 ```
-go get github.com/zweifisch/shared
+go get github.com/zweifisch/share
 ```
 
 ## usage
@@ -22,28 +22,27 @@ client usage
 from stdin
 
 ```sh
-$ grep error /var/log/app.log | share --as error
-http://localhost:8909/error
+$ grep error /var/log/app.log | share
+http://localhost:8909/1
 ```
 
 from clipboard
 
 ```sh
-$ share --as password
-http://localhost:8909/password
-```
-
-file
-
-```sh
-$ share assets.tgz
-http://localhost:8909/assets.tgz
+$ share
+http://localhost:8909/2
 ```
 
 connect to a remote server
 
 ```sh
-$ cat source.py | share --server http://192.168.11.16:8909
+$ cat source.py | share --to http://192.168.11.16:8909
+```
+
+get entry
+
+```sh
+$ share --get 17
 ```
 
 ## config
@@ -51,18 +50,14 @@ $ cat source.py | share --server http://192.168.11.16:8909
 client config
 
 ```sh
-$ share --config server http://192.168.1.10:8080
+$ share --config remote http://192.168.1.10:8909
 ```
 
 server config
 
 ```sh
-$ share --config disable put  # only client from localhost can publish content
+$ share --config disable write # only client from localhost can publish content
 ```
-
-## screenshots
-
-TBD
 
 ## development
 

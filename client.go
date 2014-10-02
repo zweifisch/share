@@ -1,10 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"net/url"
 	"os"
 
 	"github.com/atotto/clipboard"
@@ -23,17 +23,19 @@ func fromClipBoard() string {
 	return content
 }
 
-func fromStdin() string {
+func fromStdin() []byte {
 	content, _ := ioutil.ReadAll(os.Stdin)
-	return string(content)
+	return content
 }
 
 type Client struct {
 	url string
 }
 
-func (c Client) post(content string) {
-	resp, err := http.PostForm(c.url, url.Values{"content": {content}})
+func (c Client) post(content []byte) {
+	req, _ := http.NewRequest("PUT", c.url, bytes.NewReader(content))
+	client := &http.Client{}
+	resp, err := client.Do(req)
 	if err != nil {
 		fmt.Print(err)
 		return

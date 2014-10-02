@@ -50,7 +50,7 @@ func main() {
 		if hasPipe() {
 			client.post(fromStdin())
 		} else if content := fromClipBoard(); len(content) > 0 {
-			client.post(content)
+			client.post([]byte(content))
 		} else {
 			fmt.Println("nothing in clipboard")
 		}

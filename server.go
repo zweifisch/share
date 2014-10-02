@@ -60,14 +60,24 @@ func (s *Server) createEntry(w http.ResponseWriter, r *http.Request) {
 	log.Println(r.RemoteAddr, r.Method, r.RequestURI)
 	entry := strconv.Itoa(s.incr())
 	realpath := path.Join(s.root, entry)
-	content := r.PostFormValue("content")
 	if _, err := os.Stat(realpath); err == nil {
 		if _, err := os.Stat(realpath); err == nil {
 			http.Error(w, "file exists", 409)
 			return
 		}
 	}
-	ioutil.WriteFile(realpath, []byte(content), 0644)
+	dest, err := os.Create(realpath)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "failed to crete file", 500)
+		return
+	}
+	_, err = io.Copy(dest, r.Body)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "failed to crete file", 500)
+		return
+	}
 	io.WriteString(w, "http://"+r.Host+"/"+entry)
 }
 
@@ -97,7 +107,7 @@ func (s Server) serve(port int) {
 	fmt.Println(s)
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
-		case "POST":
+		case "PUT":
 			s.createEntry(w, r)
 		case "GET":
 			if r.URL.Path == "/" {
@@ -105,6 +115,8 @@ func (s Server) serve(port int) {
 			} else {
 				s.getEntry(w, r)
 			}
+		default:
+			http.Error(w, "Method not allowed", 405)
 		}
 	})
 	http.Handle("/public/", http.FileServer(

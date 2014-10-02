@@ -33,7 +33,7 @@ type Client struct {
 }
 
 func (c Client) post(content string) {
-	resp, err := http.PostForm(c.url+"/entry", url.Values{"content": {content}})
+	resp, err := http.PostForm(c.url, url.Values{"content": {content}})
 	if err != nil {
 		fmt.Print(err)
 		return

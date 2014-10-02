@@ -73,7 +73,7 @@ func (s *Server) createEntry(w http.ResponseWriter, r *http.Request) {
 
 func (s Server) getEntry(w http.ResponseWriter, r *http.Request) {
 	log.Println(r.RemoteAddr, r.Method, r.RequestURI)
-	entry := r.URL.Path[7:]
+	entry := r.URL.Path[1:]
 	realpath := path.Join(s.root, entry)
 	content, err := ioutil.ReadFile(realpath)
 	if err != nil {
@@ -95,9 +95,18 @@ func (s Server) getEntry(w http.ResponseWriter, r *http.Request) {
 func (s Server) serve(port int) {
 	s.scan()
 	fmt.Println(s)
-	http.HandleFunc("/", s.index)
-	http.HandleFunc("/entry", s.createEntry)
-	http.HandleFunc("/entry/", s.getEntry)
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case "POST":
+			s.createEntry(w, r)
+		case "GET":
+			if r.URL.Path == "/" {
+				s.index(w, r)
+			} else {
+				s.getEntry(w, r)
+			}
+		}
+	})
 	http.Handle("/public/", http.FileServer(
 		&assetfs.AssetFS{Asset: Asset, AssetDir: AssetDir, Prefix: ""}))
 	http.ListenAndServe(fmt.Sprintf(":%d", port), nil)

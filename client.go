@@ -47,3 +47,20 @@ func (c Client) post(content []byte) {
 	}
 	fmt.Println(string(body))
 }
+
+func (c Client) get(entry string) []byte {
+	req, _ := http.NewRequest("GET", c.url+"/"+entry, nil)
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Print(err)
+		return nil
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Print(err)
+		return nil
+	}
+	return body
+}

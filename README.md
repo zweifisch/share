@@ -13,7 +13,7 @@ go get github.com/zweifisch/share
 start server
 
 ```sh
-$ share --server
+$ share server
 listen on 8909
 ```
 
@@ -39,10 +39,10 @@ connect to a remote server
 $ cat source.py | share --to http://192.168.11.16:8909
 ```
 
-get entry
+get an entry
 
 ```sh
-$ share --get 17
+$ share get 17 --from http://192.168.11.16:8909
 ```
 
 ## config
@@ -50,13 +50,13 @@ $ share --get 17
 client config
 
 ```sh
-$ share --config remote http://192.168.1.10:8909
+$ share set remote http://192.168.1.10:8909
 ```
 
 server config
 
 ```sh
-$ share --config disable write # only client from localhost can publish content
+$ share set write off # only client from localhost can publish content
 ```
 
 ## development

@@ -1,11 +1,11 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"path"
 
 	"github.com/BurntSushi/toml"
+	"github.com/codegangsta/cli"
 
 	"os"
 	"os/user"
@@ -35,18 +35,22 @@ func main() {
 	configPath := path.Join(usr.HomeDir, ".share.toml")
 	toml.DecodeFile(configPath, &conf)
 
-	var startServer = flag.Bool("server", false, "run server")
-	flag.BoolVar(startServer, "s", false, "ailas for server")
-	var root = flag.String("root", conf.Server.Root, "root directory")
-	var port = flag.Int("port", conf.Server.Port, "server port")
-	var remote = flag.String("remote", conf.Client.Remote, "remote server")
-	flag.Parse()
+	app := cli.NewApp()
+	app.Name = "share"
+	app.Usage = "share code snips"
 
-	if *startServer {
-		server := Server{*root, 0, []string{}}
-		server.serve(*port)
-	} else {
-		client := Client{*remote}
+	clientFlags := []cli.Flag{
+		cli.StringFlag{
+			Name:  "remote",
+			Value: conf.Client.Remote,
+			Usage: "remote server",
+		},
+	}
+
+	app.Flags = clientFlags
+
+	app.Action = func(c *cli.Context) {
+		client := Client{c.String("remote")}
 		if hasPipe() {
 			client.post(fromStdin())
 		} else if content := fromClipBoard(); len(content) > 0 {
@@ -55,4 +59,41 @@ func main() {
 			fmt.Println("nothing in clipboard")
 		}
 	}
+
+	app.Commands = []cli.Command{
+		{
+			Name:  "server",
+			Usage: "start the server",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  "root",
+					Value: conf.Server.Root,
+					Usage: "server root directory",
+				},
+				cli.IntFlag{
+					Name:  "port",
+					Value: conf.Server.Port,
+					Usage: "port to listen",
+				},
+			},
+			Action: func(c *cli.Context) {
+				server := Server{c.String("root"), 0, []string{}}
+				server.serve(c.Int("port"))
+			},
+		},
+		{
+			Name:  "get",
+			Usage: "get an entry",
+			Flags: clientFlags,
+			Action: func(c *cli.Context) {
+				if len(c.Args()) > 0 {
+					client := Client{c.String("remote")}
+					name := c.Args()[0]
+					fmt.Print(string(client.get(name)))
+				}
+			},
+		},
+	}
+
+	app.Run(os.Args)
 }

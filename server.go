@@ -10,6 +10,7 @@ import (
 	"os"
 	"path"
 	"strconv"
+	"strings"
 
 	"github.com/elazarl/go-bindata-assetfs"
 )
@@ -90,16 +91,20 @@ func (s Server) getEntry(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Not Found", 404)
 		return
 	}
-	tmpl := `<html>
-	<meta charset="UTF-8">
-	<link rel="stylesheet" href="/public/styles/tomorrow.css">
-	<pre><code>%s</code></pre>
-	<script src="/public/highlight.pack.js"></script>
-	<script>hljs.initHighlightingOnLoad();</script>
-	</html>
-	`
-	w.Header().Set("Content-Type", "text/html")
-	io.WriteString(w, fmt.Sprintf(tmpl, html.EscapeString(string(content))))
+	if strings.Contains(r.Header.Get("Accept"), "text/html") {
+		tmpl := `<html>
+		<meta charset="UTF-8">
+		<link rel="stylesheet" href="/public/styles/tomorrow.css">
+		<pre><code>%s</code></pre>
+		<script src="/public/highlight.pack.js"></script>
+		<script>hljs.initHighlightingOnLoad();</script>
+		</html>
+		`
+		w.Header().Set("Content-Type", "text/html")
+		io.WriteString(w, fmt.Sprintf(tmpl, html.EscapeString(string(content))))
+	} else {
+		w.Write(content)
+	}
 }
 
 func (s *Server) serve(port int) {

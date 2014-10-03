@@ -102,9 +102,13 @@ func (s Server) getEntry(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, fmt.Sprintf(tmpl, html.EscapeString(string(content))))
 }
 
-func (s Server) serve(port int) {
+func (s *Server) serve(port int) {
+	s.root = expandTilda(s.root)
+	if fi, err := os.Stat(s.root); err != nil || !fi.IsDir() {
+		fmt.Printf("illegal root \"%s\" \n", s.root)
+		return
+	}
 	s.scan()
-	fmt.Println(s)
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case "PUT":
@@ -121,5 +125,6 @@ func (s Server) serve(port int) {
 	})
 	http.Handle("/public/", http.FileServer(
 		&assetfs.AssetFS{Asset: Asset, AssetDir: AssetDir, Prefix: ""}))
+	fmt.Printf("%d entries found, listen on port %d\n", len(s.entries), port)
 	http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
 }

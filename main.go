@@ -2,38 +2,19 @@ package main
 
 import (
 	"fmt"
-	"path"
+	"reflect"
+	"strings"
 
-	"github.com/BurntSushi/toml"
 	"github.com/codegangsta/cli"
 
 	"os"
-	"os/user"
 )
-
-type CfgServer struct {
-	Port  int    `toml:"port"`
-	Root  string `toml:"root"`
-	Write bool   `toml:"write"`
-}
-
-type CfgClient struct {
-	Remote string `toml:"server"`
-}
-
-type Config struct {
-	Server CfgServer `toml:"server"`
-	Client CfgClient `toml:"client"`
-}
 
 func main() {
 	cwd, _ := os.Getwd()
 	conf := Config{CfgServer{8909, cwd, true},
 		CfgClient{"http://localhost:8909"}}
-
-	usr, _ := user.Current()
-	configPath := path.Join(usr.HomeDir, ".share.toml")
-	toml.DecodeFile(configPath, &conf)
+	conf.load("~/.share.toml")
 
 	app := cli.NewApp()
 	app.Name = "share"
@@ -90,6 +71,29 @@ func main() {
 					client := Client{c.String("remote")}
 					name := c.Args()[0]
 					fmt.Print(string(client.get(name)))
+				}
+			},
+		},
+		{
+			Name:  "set",
+			Usage: "global config",
+			Action: func(c *cli.Context) {
+				if len(c.Args()) > 1 {
+					keys := strings.Split(c.Args()[0], ".")
+					value := c.Args()[1]
+					if len(keys) == 2 {
+						key := strings.ToUpper(keys[1][:1]) + keys[1][1:]
+						switch keys[0] {
+						case "client":
+							reflect.ValueOf(&conf.Client).Elem().FieldByName(key).SetString(value)
+						case "server":
+							reflect.ValueOf(&conf.Server).Elem().FieldByName(key).SetString(value)
+						default:
+							fmt.Println("invalide key %s", keys[0])
+							return
+						}
+						conf.dump("~/.share.toml")
+					}
 				}
 			},
 		},

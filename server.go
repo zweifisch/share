@@ -47,9 +47,11 @@ func (s *Server) incr() int {
 func (s Server) index(w http.ResponseWriter, r *http.Request) {
 	entries := ""
 	for _, entry := range s.entries {
-		entries += fmt.Sprintf("<a href=\"/entry/%s\">%s</a>", entry, entry)
+		entries += fmt.Sprintf("<a href=\"/%s\">%s</a>", entry, entry)
 	}
 	tmpl := `<html>
+	<meta charset="UTF-8">
+	<title>Share</title>
 	<link rel="stylesheet" href="/public/style.css">
 	%s
 	</html>`

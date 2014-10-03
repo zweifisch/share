@@ -46,11 +46,11 @@ func (s *Server) incr() int {
 func (s Server) index(w http.ResponseWriter, r *http.Request) {
 	entries := ""
 	for _, entry := range s.entries {
-		entries += fmt.Sprintf("<li><a href=\"/entry/%s\">%s</a></li>", entry, entry)
+		entries += fmt.Sprintf("<a href=\"/entry/%s\">%s</a>", entry, entry)
 	}
 	tmpl := `<html>
 	<link rel="stylesheet" href="/public/style.css">
-	<ol>%s</ol>
+	%s
 	</html>`
 	w.Header().Set("Content-Type", "text/html")
 	io.WriteString(w, fmt.Sprintf(tmpl, entries))

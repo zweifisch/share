@@ -2,8 +2,6 @@ package main
 
 import (
 	"fmt"
-	"reflect"
-	"strings"
 
 	"github.com/codegangsta/cli"
 
@@ -78,22 +76,14 @@ func main() {
 			Name:  "set",
 			Usage: "global config",
 			Action: func(c *cli.Context) {
-				if len(c.Args()) > 1 {
-					keys := strings.Split(c.Args()[0], ".")
-					value := c.Args()[1]
-					if len(keys) == 2 {
-						key := strings.ToUpper(keys[1][:1]) + keys[1][1:]
-						switch keys[0] {
-						case "client":
-							reflect.ValueOf(&conf.Client).Elem().FieldByName(key).SetString(value)
-						case "server":
-							reflect.ValueOf(&conf.Server).Elem().FieldByName(key).SetString(value)
-						default:
-							fmt.Println("invalide key %s", keys[0])
-							return
-						}
-						conf.dump("~/.share.toml")
+				defer func() {
+					if r := recover(); r != nil {
+						fmt.Printf("can't set %s\n", c.Args()[0])
 					}
+				}()
+				if len(c.Args()) > 1 {
+					conf.set(c.Args()[0], c.Args()[1])
+					conf.dump("~/.share.toml")
 				}
 			},
 		},

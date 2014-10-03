@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os/user"
+	"reflect"
+	"strconv"
 	"strings"
 
 	"github.com/BurntSushi/toml"
@@ -50,4 +52,26 @@ func (c Config) dump(path string) {
 func (c *Config) load(path string) {
 	configPath := expandTilda(path)
 	toml.DecodeFile(configPath, &c)
+}
+
+func (c *Config) set(key string, value string) {
+	keys := strings.Split(key, ".")
+	if len(keys) == 2 {
+		subkey := strings.ToUpper(keys[1][:1]) + keys[1][1:]
+		switch keys[0] {
+		case "client":
+			reflect.ValueOf(&c.Client).Elem().FieldByName(subkey).SetString(value)
+		case "server":
+			if "Port" == subkey {
+				port, _ := strconv.ParseInt(value, 10, 64)
+				reflect.ValueOf(&c.Server).Elem().FieldByName(subkey).SetInt(port)
+			} else {
+				reflect.ValueOf(&c.Server).Elem().FieldByName(subkey).SetString(value)
+			}
+		default:
+			panic("incorrect key")
+		}
+	} else {
+		panic("value missing")
+	}
 }

@@ -1,6 +1,6 @@
 # share
 
-share code snips with teammate
+sharing code snippets with teammates
 
 ## install
 
@@ -17,20 +17,18 @@ $ share server
 listen on 8909
 ```
 
-client usage
-
-from stdin
+publish snip
 
 ```sh
-$ grep error /var/log/app.log | share
-http://localhost:8909/1
+$ cat /var/log/app.log | share
+http://localhost:8909/0
 ```
 
 from clipboard
 
 ```sh
 $ share
-http://localhost:8909/2
+http://localhost:8909/1
 ```
 
 connect to a remote server
@@ -42,7 +40,7 @@ $ cat source.py | share --remote http://192.168.11.16:8909
 get an entry
 
 ```sh
-$ share get 17 --remote http://192.168.11.16:8909
+$ share get 17
 ```
 
 ## config

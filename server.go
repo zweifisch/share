@@ -132,6 +132,6 @@ func (s *Server) serve(port int) {
 	})
 	http.Handle("/public/", http.FileServer(
 		&assetfs.AssetFS{Asset: Asset, AssetDir: AssetDir, Prefix: ""}))
-	fmt.Printf("%d entries found, listen on port %d\n", len(s.entries), port)
+	fmt.Printf("%d entries found in %s, listen on port %d\n", len(s.entries), s.root, port)
 	http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
 }
